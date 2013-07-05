@@ -69,7 +69,7 @@ module IbateleSms
   end # debug?
 
   def active?
-    @active !== false
+    @active != false
   end # active?
 
   def valid_phone?(phone)
