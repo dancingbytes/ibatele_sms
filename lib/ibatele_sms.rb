@@ -131,8 +131,3 @@ module IbateleSms
 end # IbateleSms
 
 require "ibatele_sms/base"
-
-::IbateleSms.debug_on
-
-
-
