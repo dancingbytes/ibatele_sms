@@ -152,7 +152,7 @@ module IbateleSms
 
       ::EM.run do
 
-        ::Fiber.new do
+#        ::Fiber.new do
 
           ::Net::HTTP.start( ::IbateleSms::HOST, :use_ssl => ::IbateleSms::USE_SSL ) do |http|
 
@@ -166,7 +166,7 @@ module IbateleSms
           end
           ::EM.stop_event_loop
 
-        end.resume
+#       end.resume
 
       end # run
 
