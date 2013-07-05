@@ -1,5 +1,6 @@
 # encoding: utf-8
 require "ibatele_sms/version"
+require "ibatele_sms/errors"
 
 module IbateleSms
 
@@ -12,7 +13,13 @@ module IbateleSms
 
   def login(usr, pass)
 
-    @session = ::IbateleSms::Base.sessionid(usr, pass)
+    res = ::IbateleSms::Base.sessionid(usr, pass)
+    raise res if res.is_a?(::IbateleSms::Error)
+
+    @usr     = usr
+    @pass    = pass
+    @session = res
+
     self
 
   end # login
@@ -24,12 +31,50 @@ module IbateleSms
     phone = ::IbateleSms::convert_phone(phone)
     return false unless phone
 
-    ::IbateleSms::Base.sms_send(@session, phone, msg)
+    res = ::IbateleSms::Base.sms_send(@session, phone, msg)
+
+    # Повторная авторизация и отправка сообщения
+    if res.is_a?(::IbateleSms::SessionExpiredError)
+
+      self.login(@usr, @pass)
+      self.message(phone, msg)
+
+    elsif res.is_a?(::IbateleSms::Error)
+      raise res
+    end
+
+    res
 
   end # message
 
+  def balance
+    ::IbateleSms::Base.balance(@session)
+  end # balance
+
+  def sms_state(mid)
+
+    res = ::IbateleSms::Base.sms_state(@session, mid)
+    raise res if res.is_a?(::IbateleSms::Error)
+
+    res
+
+  end # sms_state
+
+  def sms_stats(start, stop)
+
+    res = ::IbateleSms::Base.sms_stats(@session, start, stop)
+    raise res if res.is_a?(::IbateleSms::Error)
+
+    res
+
+
+  end # sms_stats
+
   def logout
+
+    @session = nil
     self
+
   end # logout
 
   def turn_on
@@ -86,4 +131,8 @@ module IbateleSms
 end # IbateleSms
 
 require "ibatele_sms/base"
+
+::IbateleSms.debug_on
+
+
 

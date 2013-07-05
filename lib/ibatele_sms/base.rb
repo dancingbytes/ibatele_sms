@@ -7,25 +7,6 @@ module IbateleSms
 
     extend self
 
-    MSG_CODES = {
-
-      -1  => "Отправлено (передано в мобильную сеть)",
-      -2  => "В очереди",
-      47  => "Удалено",
-      -98 => "Остановлено",
-      0   => "Доставлено абоненту",
-      10  => "Неверно введен адрес отправителя",
-      11  => "неверно введен адрес получателя",
-      41  => "недопустимый адрес получателя",
-      42  => "Отклонено смс-центром",
-      46  => "Просрочено (истек срок жизни сообщения)",
-      48  => "Отклонено платформой",
-      69  => "Отклонено",
-      99  => "Нетзвестно",
-      255 => "Сообщение не попало в БД, либо оно старше 48 часов"
-
-    }.freeze
-
     def sessionid(user, password)
 
       data = ""
@@ -34,31 +15,23 @@ module IbateleSms
         log("[sessionid] => /rest/User/SessionId?login=#{escape(user)}&password=#{escape(password)}")
 
         res  = http.get("/rest/User/SessionId?login=#{escape(user)}&password=#{escape(password)}")
-        data = (res.body || "").strip.gsub('"', '')
+        data = (res.body || "").gsub('"', '')
 
         log("[sessionid] <= #{data}")
 
       end # em_run
-      data
+
+      return data unless data.is_a?(::Hash)
+
+      case data["Code"]
+
+        when 1 then ::IbateleSms::AuthError.new(data["Desc"])
+        when 4 then ::IbateleSms::AuthError.new(data["Desc"])
+        else        ::IbateleSms::UnknownError.new(data["Desc"])
+
+      end # case
 
     end # sessionid
-
-    def balance(sid)
-
-      data = ""
-      em_run do |http|
-
-        log("[balance] => /rest/User/Balance?sessionId=#{escape(sid)}")
-
-        res  = http.get("/rest/User/Balance?sessionId=#{escape(sid)}")
-        data = (res.body || "").strip.to_f
-
-        log("[balance] <= #{data}")
-
-      end # em_run
-      data
-
-    end # balance
 
     def sms_send(sid, phone, msg, ttl = 48*60)
 
@@ -84,9 +57,37 @@ module IbateleSms
         log("[sms_send] <= #{data}")
 
       end # em_run
-      data
+
+      return data unless data.is_a?(::Hash)
+
+      case data["Code"]
+
+        when 1 then ::IbateleSms::SessionIdError.new(data["Desc"])
+        when 2 then ::IbateleSms::ArgumentError.new(data["Desc"])
+        when 4 then ::IbateleSms::SessionExpiredError.new(data["Desc"])
+        when 6 then ::IbateleSms::SourceAddressError.new(data["Desc"])
+        else        ::IbateleSms::UnknownError.new(data["Desc"])
+
+      end # case
 
     end # sms_send
+
+    def balance(sid)
+
+      data = ""
+      em_run do |http|
+
+        log("[balance] => /rest/User/Balance?sessionId=#{escape(sid)}")
+
+        res  = http.get("/rest/User/Balance?sessionId=#{escape(sid)}")
+        data = (res.body || "").to_f
+
+        log("[balance] <= #{data}")
+
+      end # em_run
+      data
+
+    end # balance
 
     def sms_state(sid, mid)
 
@@ -101,6 +102,8 @@ module IbateleSms
         log("[sms_state] <= #{data}")
 
       end # em_run
+
+      return ::IbateleSms::ArgumentError.new(data["Desc"]) if data["Code"] == 1
       data
 
     end # sms_state
@@ -110,22 +113,32 @@ module IbateleSms
       data = ""
       em_run do |http|
 
-        log("[sms_stats] => /rest/Sms/Statistics?sessionId=#{escape(sid)}&startDateTime=#{escape(stop)}&endDateTime=#{stop}")
+        log("[sms_stats] => /rest/Sms/Statistics?sessionId=#{escape(sid)}&startDateTime=#{escape(start)}&endDateTime=#{escape(stop)}")
 
-        res  = http.get("/rest/Sms/Statistics?sessionId=#{escape(sid)}&startDateTime=#{escape(stop)}&endDateTime=#{stop}")
+        res  = http.get("/rest/Sms/Statistics?sessionId=#{escape(sid)}&startDateTime=#{escape(start)}&endDateTime=#{escape(stop)}")
         data = ::JSON.parse(res.body) rescue {}
 
         log("[sms_stats] <= #{data}")
 
       end # em_run
-      data
+
+      return data if data["Code"].nil?
+
+      case data["Code"]
+
+        when 1 then ::IbateleSms::SessionIdError.new(data["Desc"])
+        when 2 then ::IbateleSms::ArgumentError.new(data["Desc"])
+        when 9 then ::IbateleSms::ArgumentError.new(data["Desc"])
+        else        ::IbateleSms::UnknownError.new(data["Desc"])
+
+      end # case
 
     end # sms_stats
 
     private
 
     def escape(str)
-      ::URI::escape(str)
+      ::URI::escape(str || "")
     end # escape
 
     def log(msg)
@@ -142,7 +155,14 @@ module IbateleSms
         ::Fiber.new do
 
           ::Net::HTTP.start( ::IbateleSms::HOST, :use_ssl => ::IbateleSms::USE_SSL ) do |http|
-            yield(http)
+
+            begin
+              yield(http)
+            rescue => e
+              puts e.message
+              puts e.backtrace.join("\n")
+            end
+
           end
           ::EM.stop_event_loop
 
