@@ -1,5 +1,5 @@
 # encoding: utf-8
-require 'em-net-http'
+require 'net/http'
 
 module IbateleSms
 
@@ -10,7 +10,7 @@ module IbateleSms
     def sessionid(user, password)
 
       data = ""
-      em_run do |http|
+      block_run do |http|
 
         log("[sessionid] => /rest/User/SessionId?login=#{escape(user)}&password=#{escape(password)}")
 
@@ -19,7 +19,7 @@ module IbateleSms
 
         log("[sessionid] <= #{data}")
 
-      end # em_run
+      end # block_run
 
       return data unless data.is_a?(::Hash)
 
@@ -46,7 +46,7 @@ module IbateleSms
       }
 
       data = ""
-      em_run do |http|
+      block_run do |http|
 
         pr = ::URI.encode_www_form(request)
         log("[sms_send] => /rest/Sms/Send  #{pr}")
@@ -56,7 +56,7 @@ module IbateleSms
 
         log("[sms_send] <= #{data}")
 
-      end # em_run
+      end # block_run
 
       return data unless data.is_a?(::Hash)
 
@@ -75,7 +75,7 @@ module IbateleSms
     def balance(sid)
 
       data = ""
-      em_run do |http|
+      block_run do |http|
 
         log("[balance] => /rest/User/Balance?sessionId=#{escape(sid)}")
 
@@ -84,7 +84,7 @@ module IbateleSms
 
         log("[balance] <= #{data}")
 
-      end # em_run
+      end # block_run
       data
 
     end # balance
@@ -92,7 +92,7 @@ module IbateleSms
     def sms_state(sid, mid)
 
       data = ""
-      em_run do |http|
+      block_run do |http|
 
         log("[sms_state] => /rest/Sms/State?sessionId=#{escape(sid)}&messageId=#{escape(mid)}")
 
@@ -101,7 +101,7 @@ module IbateleSms
 
         log("[sms_state] <= #{data}")
 
-      end # em_run
+      end # block_run
 
       return ::IbateleSms::ArgumentError.new(data["Desc"]) if data["Code"] == 1
       data
@@ -111,7 +111,7 @@ module IbateleSms
     def sms_stats(sid, start, stop)
 
       data = ""
-      em_run do |http|
+      block_run do |http|
 
         log("[sms_stats] => /rest/Sms/Statistics?sessionId=#{escape(sid)}&startDateTime=#{escape(start)}&endDateTime=#{escape(stop)}")
 
@@ -120,7 +120,7 @@ module IbateleSms
 
         log("[sms_stats] <= #{data}")
 
-      end # em_run
+      end # block_run
 
       return data if data["Code"].nil?
 
@@ -148,29 +148,21 @@ module IbateleSms
 
     end # log
 
-    def em_run
+    def block_run
 
-      ::EM.run do
 
-#        ::Fiber.new do
+      ::Net::HTTP.start( ::IbateleSms::HOST, :use_ssl => ::IbateleSms::USE_SSL ) do |http|
 
-          ::Net::HTTP.start( ::IbateleSms::HOST, :use_ssl => ::IbateleSms::USE_SSL ) do |http|
+        begin
+          yield(http)
+        rescue => e
+          puts e.message
+          puts e.backtrace.join("\n")
+        end
 
-            begin
-              yield(http)
-            rescue => e
-              puts e.message
-              puts e.backtrace.join("\n")
-            end
+      end
 
-          end
-          ::EM.stop_event_loop
-
-#       end.resume
-
-      end # run
-
-    end # em_run
+    end # block_run
 
   end # Base
 
