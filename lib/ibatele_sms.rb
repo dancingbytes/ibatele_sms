@@ -67,7 +67,6 @@ module IbateleSms
 
     res
 
-
   end # sms_stats
 
   def logout

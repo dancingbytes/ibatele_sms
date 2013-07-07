@@ -150,7 +150,6 @@ module IbateleSms
 
     def block_run
 
-
       ::Net::HTTP.start( ::IbateleSms::HOST, :use_ssl => ::IbateleSms::USE_SSL ) do |http|
 
         begin
