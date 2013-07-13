@@ -15,7 +15,7 @@ module IbateleSms
         log("[sessionid] => /rest/User/SessionId?login=#{escape(user)}&password=#{escape(password)}")
 
         res  = http.get("/rest/User/SessionId?login=#{escape(user)}&password=#{escape(password)}")
-        data = (res.body || "").gsub('"', '')
+        data = ::JSON.parse(res.body) rescue (res.body || "").gsub('"', '')
 
         log("[sessionid] <= #{data}")
 
@@ -52,7 +52,7 @@ module IbateleSms
         log("[sms_send] => /rest/Sms/Send  #{pr}")
 
         res  = http.post("/rest/Sms/Send", pr)
-        data = ::JSON.parse(res.body) rescue {}
+        data = ::JSON.parse(res.body) rescue  (res.body || "").gsub('"', '')
 
         log("[sms_send] <= #{data}")
 

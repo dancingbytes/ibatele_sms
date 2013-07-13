@@ -15,6 +15,8 @@ module IbateleSms
 
   class MissingError < ::IbateleSms::Error; end
 
+  class InactiveError < ::IbateleSms::Error; end
+
   class UnknownError < ::IbateleSms::Error; end
 
 end # IbateleSms

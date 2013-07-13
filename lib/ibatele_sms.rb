@@ -14,36 +14,43 @@ module IbateleSms
   def login(usr, pass)
 
     res = ::IbateleSms::Base.sessionid(usr, pass)
-    raise res if res.is_a?(::IbateleSms::Error)
+    return [ false, res ] if res.is_a?(::IbateleSms::Error)
 
     @usr     = usr
     @pass    = pass
     @session = res
 
-    self
+    [ true, nil ]
 
   end # login
 
   def message(phone, msg)
 
-    return unless self.active?
+    return [
+      false,
+      ::IbateleSms::InactiveError.new("Отправка смс отключена")
+    ] unless self.active?
 
-    phone = ::IbateleSms::convert_phone(phone)
-    return false unless phone
+    new_phone = ::IbateleSms::convert_phone(phone)
 
-    res = ::IbateleSms::Base.sms_send(@session, phone, msg)
+    return [
+      false,
+      ::IbateleSms::ArgumentError.new("Неверный формат телефона: #{phone}")
+    ] unless new_phone
+
+    res = ::IbateleSms::Base.sms_send(@session, new_phone, msg)
 
     # Повторная авторизация и отправка сообщения
     if res.is_a?(::IbateleSms::SessionExpiredError)
 
       self.login(@usr, @pass)
-      self.message(phone, msg)
+      self.message(new_phone, msg)
 
     elsif res.is_a?(::IbateleSms::Error)
-      raise res
+      return [ false, res ]
     end
 
-    res
+    [ true, res ]
 
   end # message
 
@@ -54,18 +61,18 @@ module IbateleSms
   def sms_state(mid)
 
     res = ::IbateleSms::Base.sms_state(@session, mid)
-    raise res if res.is_a?(::IbateleSms::Error)
+    return [ false, res ] if res.is_a?(::IbateleSms::Error)
 
-    res
+    [ true, res ]
 
   end # sms_state
 
   def sms_stats(start, stop)
 
     res = ::IbateleSms::Base.sms_stats(@session, start, stop)
-    raise res if res.is_a?(::IbateleSms::Error)
+    return [ false, res ] if res.is_a?(::IbateleSms::Error)
 
-    res
+    [ true, res ]
 
   end # sms_stats
 
