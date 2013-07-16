@@ -9,12 +9,19 @@ module IbateleSms
 
     def sessionid(user, password)
 
-      data = ""
+      data  = ""
+      pr    = ::URI.encode_www_form({
+
+        login:      user,
+        password:   password
+
+      })
+
       block_run do |http|
 
-        log("[sessionid] => /rest/User/SessionId?login=#{escape(user)}&password=#{escape(password)}")
+        log("[sessionid] => /rest/User/SessionId?#{pr}")
 
-        res  = http.get("/rest/User/SessionId?login=#{escape(user)}&password=#{escape(password)}")
+        res  = http.get("/rest/User/SessionId?#{pr}")
         data = ::JSON.parse(res.body) rescue (res.body || "").gsub('"', '')
 
         log("[sessionid] <= #{data}")
@@ -35,7 +42,8 @@ module IbateleSms
 
     def sms_send(sid, phone, msg, ttl = 48*60)
 
-      request = {
+      data  = ""
+      pr    = ::URI.encode_www_form({
 
         sessionId:          sid,
         data:               msg,
@@ -43,12 +51,11 @@ module IbateleSms
         destinationAddress: phone,
         sourceAddress:      ::IbateleSms::TITLE_SMS
 
-      }
+      })
 
-      data = ""
       block_run do |http|
 
-        pr = ::URI.encode_www_form(request)
+
         log("[sms_send] => /rest/Sms/Send  #{pr}")
 
         res  = http.post("/rest/Sms/Send", pr)
@@ -74,12 +81,18 @@ module IbateleSms
 
     def balance(sid)
 
-      data = ""
+      data  = ""
+      pr    = ::URI.encode_www_form({
+
+        sessionId: sid
+
+      })
+
       block_run do |http|
 
-        log("[balance] => /rest/User/Balance?sessionId=#{escape(sid)}")
+        log("[balance] => /rest/User/Balance?#{pr}")
 
-        res  = http.get("/rest/User/Balance?sessionId=#{escape(sid)}")
+        res  = http.get("/rest/User/Balance?#{pr}")
         data = (res.body || "").to_f
 
         log("[balance] <= #{data}")
@@ -91,12 +104,19 @@ module IbateleSms
 
     def sms_state(sid, mid)
 
-      data = ""
+      data  = ""
+      pr    = ::URI.encode_www_form({
+
+        sessionId: sid,
+        messageId: mid
+
+      })
+
       block_run do |http|
 
-        log("[sms_state] => /rest/Sms/State?sessionId=#{escape(sid)}&messageId=#{escape(mid)}")
+        log("[sms_state] => /rest/Sms/State?#{pr}")
 
-        res  = http.get("/rest/Sms/State?sessionId=#{escape(sid)}&messageId=#{escape(mid)}")
+        res  = http.get("/rest/Sms/State?#{pr}")
         data = ::JSON.parse(res.body) rescue {}
 
         log("[sms_state] <= #{data}")
@@ -110,12 +130,20 @@ module IbateleSms
 
     def sms_stats(sid, start, stop)
 
-      data = ""
+      data  = ""
+      pr    = ::URI.encode_www_form({
+
+        sessionId:      sid,
+        startDateTime:  start,
+        endDateTime:    stop
+
+      })
+
       block_run do |http|
 
-        log("[sms_stats] => /rest/Sms/Statistics?sessionId=#{escape(sid)}&startDateTime=#{escape(start)}&endDateTime=#{escape(stop)}")
+        log("[sms_stats] => /rest/Sms/Statistics?#{pr}")
 
-        res  = http.get("/rest/Sms/Statistics?sessionId=#{escape(sid)}&startDateTime=#{escape(start)}&endDateTime=#{escape(stop)}")
+        res  = http.get("/rest/Sms/Statistics?#{pr}")
         data = ::JSON.parse(res.body) rescue {}
 
         log("[sms_stats] <= #{data}")
@@ -136,10 +164,6 @@ module IbateleSms
     end # sms_stats
 
     private
-
-    def escape(str)
-      ::URI::escape(str || "")
-    end # escape
 
     def log(msg)
 
