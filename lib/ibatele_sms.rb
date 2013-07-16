@@ -102,7 +102,7 @@ module IbateleSms
   def debug_on
 
     @debug = true
-    puts "Отладочный режим ВКЛЮЧЕН"
+    puts "[IbateleSms] Отладочный режим ВКЛЮЧЕН"
     self
 
   end # debug_on
@@ -110,7 +110,7 @@ module IbateleSms
   def debug_off
 
     @debug = false
-    puts "Отладочный режим ОТКЛЮЧЕН"
+    puts "[IbateleSms] Отладочный режим ОТКЛЮЧЕН"
     self
 
   end # debug_off
