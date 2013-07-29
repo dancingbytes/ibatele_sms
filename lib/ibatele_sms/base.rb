@@ -1,5 +1,6 @@
 # encoding: utf-8
 require 'net/http'
+require 'timeout'
 
 module IbateleSms
 
@@ -17,7 +18,7 @@ module IbateleSms
 
       })
 
-      block_run do |http|
+      err = block_run do |http|
 
         log("[sessionid] => /rest/User/SessionId?#{pr}")
 
@@ -28,6 +29,7 @@ module IbateleSms
 
       end # block_run
 
+      return err  if err
       return data unless data.is_a?(::Hash)
 
       case data["Code"]
@@ -53,8 +55,7 @@ module IbateleSms
 
       })
 
-      block_run do |http|
-
+      err = block_run do |http|
 
         log("[sms_send] => /rest/Sms/Send  #{pr}")
 
@@ -65,6 +66,7 @@ module IbateleSms
 
       end # block_run
 
+      return err  if err
       return data unless data.is_a?(::Hash)
 
       case data["Code"]
@@ -73,6 +75,7 @@ module IbateleSms
         when 2 then ::IbateleSms::ArgumentError.new(data["Desc"])
         when 4 then ::IbateleSms::SessionExpiredError.new(data["Desc"])
         when 6 then ::IbateleSms::SourceAddressError.new(data["Desc"])
+        when 8 then ::IbateleSms::SendingError.new(data["Desc"])
         else        ::IbateleSms::UnknownError.new(data["Desc"])
 
       end # case
@@ -88,7 +91,7 @@ module IbateleSms
 
       })
 
-      block_run do |http|
+      err = block_run do |http|
 
         log("[balance] => /rest/User/Balance?#{pr}")
 
@@ -98,6 +101,8 @@ module IbateleSms
         log("[balance] <= #{data}")
 
       end # block_run
+
+      return err  if err
       data
 
     end # balance
@@ -112,7 +117,7 @@ module IbateleSms
 
       })
 
-      block_run do |http|
+      err = block_run do |http|
 
         log("[sms_state] => /rest/Sms/State?#{pr}")
 
@@ -123,6 +128,7 @@ module IbateleSms
 
       end # block_run
 
+      return err  if err
       return ::IbateleSms::ArgumentError.new(data["Desc"]) if data["Code"] == 1
       data
 
@@ -139,7 +145,7 @@ module IbateleSms
 
       })
 
-      block_run do |http|
+      err = block_run do |http|
 
         log("[sms_stats] => /rest/Sms/Statistics?#{pr}")
 
@@ -150,6 +156,7 @@ module IbateleSms
 
       end # block_run
 
+      return err  if err
       return data if data["Code"].nil?
 
       case data["Code"]
@@ -174,16 +181,25 @@ module IbateleSms
 
     def block_run
 
+      error = false
+
       ::Net::HTTP.start( ::IbateleSms::HOST, :use_ssl => ::IbateleSms::USE_SSL ) do |http|
 
         begin
-          yield(http)
+
+          ::Timeout::timeout(::IbateleSms::TIMEOUT) {
+            yield(http)
+          }
+
+        rescue ::Timeout::Error
+          error = ::IbateleSms::TimeoutError.new("Превышен интервал ожидания: #{::IbateleSms::TIMEOUT}")
         rescue => e
-          puts e.message
-          puts e.backtrace.join("\n")
+          error = ::IbateleSms::UnknownError.new(e.message)
         end
 
-      end
+      end # do
+
+      error
 
     end # block_run
 

@@ -6,6 +6,7 @@ module IbateleSms
 
   extend self
 
+  TIMEOUT   = 30
   HOST      = 'integrationapi.net'
   USE_SSL   = true
   PHONE_RE  = /\A(\+7|7|8)(\d{10})\Z/
@@ -55,7 +56,12 @@ module IbateleSms
   end # message
 
   def balance
-    ::IbateleSms::Base.balance(@session)
+
+    res = ::IbateleSms::Base.balance(@session)
+    return [ false, res ] if res.is_a?(::IbateleSms::Error)
+
+    [ true, res ]
+
   end # balance
 
   def sms_state(mid)

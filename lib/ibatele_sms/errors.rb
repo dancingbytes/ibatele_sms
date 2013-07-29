@@ -7,6 +7,10 @@ module IbateleSms
 
   class SessionExpiredError < ::IbateleSms::Error; end
 
+  class SendingError < ::IbateleSms::Error; end
+
+  class TimeoutError < ::IbateleSms::Error; end
+
   class AuthError < ::IbateleSms::Error; end
 
   class ArgumentError < ::IbateleSms::Error; end
