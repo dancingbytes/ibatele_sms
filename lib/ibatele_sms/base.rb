@@ -181,23 +181,46 @@ module IbateleSms
 
     def block_run
 
-      error = false
+      error     = false
+      try_count = ::IbateleSms::RETRY
 
-      ::Net::HTTP.start( ::IbateleSms::HOST, :use_ssl => ::IbateleSms::USE_SSL ) do |http|
+      begin
 
-        begin
+        ::Timeout::timeout(::IbateleSms::TIMEOUT) {
 
-          ::Timeout::timeout(::IbateleSms::TIMEOUT) {
-            yield(http)
-          }
+          ::Net::HTTP.start(
+            ::IbateleSms::HOST,
+            ::IbateleSms::PORT,
+            :use_ssl => ::IbateleSms::USE_SSL
+          ) do |http|
+              yield(http)
+          end
 
-        rescue ::Timeout::Error
-          error = ::IbateleSms::TimeoutError.new("Превышен интервал ожидания: #{::IbateleSms::TIMEOUT}")
-        rescue => e
-          error = ::IbateleSms::UnknownError.new(e.message)
+        }
+
+      rescue ::Errno::ECONNREFUSED
+
+        if try_count > 0
+          try_count -= 1
+          sleep ::IbateleSms::WAIT_TIME
+          retry
+        else
+          error = ::IbateleSms::ConnectionError.new("Прервано соедиение с сервером")
         end
 
-      end # do
+      rescue ::Timeout::Error
+
+        if try_count > 0
+          try_count -= 1
+          sleep ::IbateleSms::WAIT_TIME
+          retry
+        else
+          error = ::IbateleSms::TimeoutError.new("Превышен интервал ожидания #{::IbateleSms::TIMEOUT} сек. после #{::IbateleSms::RETRY} попыток")
+        end
+
+      rescue => e
+        error = ::IbateleSms::UnknownError.new(e.message)
+      end
 
       error
 

@@ -3,6 +3,8 @@ module IbateleSms
 
   class Error < ::StandardError; end
 
+  class ConnectionError < ::IbateleSms::Error; end
+
   class SessionIdError < ::IbateleSms::Error; end
 
   class SessionExpiredError < ::IbateleSms::Error; end

@@ -8,7 +8,10 @@ module IbateleSms
 
   TIMEOUT   = 30
   HOST      = 'integrationapi.net'
+  PORT      = 443
   USE_SSL   = true
+  RETRY     = 3
+  WAIT_TIME = 5
   PHONE_RE  = /\A(\+7|7|8)(\d{10})\Z/
   TITLE_SMS = "Anlas.ru"
 
