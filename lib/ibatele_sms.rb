@@ -1,13 +1,17 @@
 # encoding: utf-8
-require "ibatele_sms/version"
-require "ibatele_sms/errors"
+require 'nokogiri'
+require 'net/http'
+require 'timeout'
+
+require 'ibatele_sms/version'
+require 'ibatele_sms/errors'
 
 module IbateleSms
 
   extend self
 
   TIMEOUT   = 30
-  HOST      = 'integrationapi.net'
+  HOST      = 'lk.ibatele.com'
   PORT      = 443
   USE_SSL   = true
   RETRY     = 3
@@ -17,77 +21,59 @@ module IbateleSms
 
   def login(usr, pass)
 
-    res = ::IbateleSms::Base.sessionid(usr, pass)
-    return [ false, res ] if res.is_a?(::IbateleSms::Error)
-
-    @usr     = usr
-    @pass    = pass
-    @session = res
-
-    [ true, nil ]
+    @usr  = usr
+    @pass = pass
+    self
 
   end # login
 
-  def message(phone, msg)
+  def message(phone, msg, opts = {})
 
-    return [
-      false,
-      ::IbateleSms::InactiveError.new("Отправка смс отключена")
-    ] unless self.active?
+    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
 
     new_phone = ::IbateleSms::convert_phone(phone)
 
-    return [
-      false,
-      ::IbateleSms::ArgumentError.new("Неверный формат телефона: #{phone}")
-    ] unless new_phone
-
-    res = ::IbateleSms::Base.sms_send(@session, new_phone, msg)
-
-    # Повторная авторизация и отправка сообщения
-    if res.is_a?(::IbateleSms::SessionExpiredError)
-
-      self.login(@usr, @pass)
-      self.message(new_phone, msg)
-
-    elsif res.is_a?(::IbateleSms::Error)
-      return [ false, res ]
-    end
-
-    [ true, res ]
+    return ::IbateleSms::ArgumentError.new("Неверный формат телефона: #{phone}") unless new_phone
+    ::IbateleSms::Base.sms_send(@usr, @pass, phone, msg, opts)
 
   end # message
 
+  def state(*args)
+
+    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
+    ::IbateleSms::Base.sms_state(@usr, @pass, args)
+
+  end # state
+
   def balance
 
-    res = ::IbateleSms::Base.balance(@session)
-    return [ false, res ] if res.is_a?(::IbateleSms::Error)
-
-    [ true, res ]
+    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
+    ::IbateleSms::Base.balance(@usr, @pass)
 
   end # balance
 
-  def sms_state(mid)
+  def time
 
-    res = ::IbateleSms::Base.sms_state(@session, mid)
-    return [ false, res ] if res.is_a?(::IbateleSms::Error)
+    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
+    ::IbateleSms::Base.time(@usr, @pass)
 
-    [ true, res ]
+  end # time
 
-  end # sms_state
+  def info(*args)
 
-  def sms_stats(start, stop)
+    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
+    ::IbateleSms::Base.info(@usr, @pass, args)
 
-    res = ::IbateleSms::Base.sms_stats(@session, start, stop)
-    return [ false, res ] if res.is_a?(::IbateleSms::Error)
+  end # info
 
-    [ true, res ]
-
-  end # sms_stats
+  def error?(e)
+    e.is_a?(::IbateleSms::Error)
+  end # error?
 
   def logout
 
-    @session = nil
+    @usr  = nil
+    @pass = nil
     self
 
   end # logout
@@ -145,4 +131,6 @@ module IbateleSms
 
 end # IbateleSms
 
+require 'ibatele_sms/request'
+require 'ibatele_sms/respond'
 require "ibatele_sms/base"

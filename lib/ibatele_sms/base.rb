@@ -1,174 +1,186 @@
 # encoding: utf-8
-require 'net/http'
-require 'timeout'
-
 module IbateleSms
 
   module Base
 
     extend self
 
-    def sessionid(user, password)
+    def sms_send(login, pass, phone, msg, opts = {})
 
-      data  = ""
-      pr    = ::URI.encode_www_form({
+      client_id_sms = opts[:client_id] || [phone, rand].join
 
-        login:      user,
-        password:   password
+      r = ::IbateleSms::Request.sms_send({
+
+        login:            login,
+        password:         pass,
+
+        sender:           ::IbateleSms::TITLE_SMS,
+        text:             msg,
+        phone:            phone,
+        client_id_sms:    client_id_sms,
+        time_send:        opts[:time_send],
+        validity_period:  opts[:ttl]
 
       })
 
-      err = block_run do |http|
+      uri   = url_for
+      data  = []
+      err   = block_run do |http|
 
-        log("[sessionid] => /rest/User/SessionId?#{pr}")
+        log("[sms_send] => #{uri} \n\r#{r}")
 
-        res  = http.get("/rest/User/SessionId?#{pr}")
-        data = ::JSON.parse(res.body) rescue (res.body || "").gsub('"', '')
+        res = request do |headers|
+          http.post(uri, r, headers)
+        end
 
-        log("[sessionid] <= #{data}")
+        log("[sms_send] <= #{uri} \n\r#{res.body}")
+
+        data = ::IbateleSms::Respond.sms_send(res.body)
 
       end # block_run
 
       return err  if err
-      return data unless data.is_a?(::Hash)
+      return data if data.is_a?(::IbateleSms::Error)
 
-      case data["Code"]
+      data = data.first
+      return data[:error] if data[:error]
 
-        when 1 then ::IbateleSms::AuthError.new(data["Desc"])
-        when 4 then ::IbateleSms::AuthError.new(data["Desc"])
-        else        ::IbateleSms::UnknownError.new(data["Desc"])
-
-      end # case
-
-    end # sessionid
-
-    def sms_send(sid, phone, msg, ttl = 48*60)
-
-      data  = ""
-      pr    = ::URI.encode_www_form({
-
-        sessionId:          sid,
-        data:               msg,
-        validity:           ttl,
-        destinationAddress: phone,
-        sourceAddress:      ::IbateleSms::TITLE_SMS
-
-      })
-
-      err = block_run do |http|
-
-        log("[sms_send] => /rest/Sms/Send  #{pr}")
-
-        res  = http.post("/rest/Sms/Send", pr)
-        data = ::JSON.parse(res.body) rescue  (res.body || "").gsub('"', '')
-
-        log("[sms_send] <= #{data}")
-
-      end # block_run
-
-      return err  if err
-      return data unless data.is_a?(::Hash)
-
-      case data["Code"]
-
-        when 1 then ::IbateleSms::SessionIdError.new(data["Desc"])
-        when 2 then ::IbateleSms::ArgumentError.new(data["Desc"])
-        when 4 then ::IbateleSms::SessionExpiredError.new(data["Desc"])
-        when 6 then ::IbateleSms::SourceAddressError.new(data["Desc"])
-        when 8 then ::IbateleSms::SendingError.new(data["Desc"])
-        else        ::IbateleSms::UnknownError.new(data["Desc"])
-
-      end # case
+      hash = {}
+      hash[phone] = data
+      hash[phone][:client_id_sms] = client_id_sms
+      hash
 
     end # sms_send
 
-    def balance(sid)
+    def sms_state(login, pass, mid)
 
-      data  = ""
-      pr    = ::URI.encode_www_form({
+      r = ::IbateleSms::Request.sms_state({
 
-        sessionId: sid
+        login:      login,
+        password:   pass,
+        mid:        mid.is_a?(::Array) ? mid : [mid]
 
       })
 
-      err = block_run do |http|
+      uri   = url_for "state"
+      data  = []
+      err   = block_run do |http|
 
-        log("[balance] => /rest/User/Balance?#{pr}")
+        log("[sms_state] => #{uri} \n\r#{r}")
 
-        res  = http.get("/rest/User/Balance?#{pr}")
-        data = (res.body || "").to_f
+        res = request do |headers|
+          http.post(uri, r, headers)
+        end
 
-        log("[balance] <= #{data}")
+        log("[sms_state] <= #{uri} \n\r#{res.body}")
+
+        data = ::IbateleSms::Respond.sms_state(res.body)
 
       end # block_run
 
       return err  if err
-      data
+      return data if data.is_a?(::IbateleSms::Error)
 
-    end # balance
-
-    def sms_state(sid, mid)
-
-      data  = ""
-      pr    = ::URI.encode_www_form({
-
-        sessionId: sid,
-        messageId: mid
-
-      })
-
-      err = block_run do |http|
-
-        log("[sms_state] => /rest/Sms/State?#{pr}")
-
-        res  = http.get("/rest/Sms/State?#{pr}")
-        data = ::JSON.parse(res.body) rescue {}
-
-        log("[sms_state] <= #{data}")
-
-      end # block_run
-
-      return err  if err
-      return ::IbateleSms::ArgumentError.new(data["Desc"]) if data["Code"] == 1
       data
 
     end # sms_state
 
-    def sms_stats(sid, start, stop)
+    def balance(login, pass)
 
-      data  = ""
-      pr    = ::URI.encode_www_form({
+      r = ::IbateleSms::Request.balance({
 
-        sessionId:      sid,
-        startDateTime:  start,
-        endDateTime:    stop
+        login:      login,
+        password:   pass
 
       })
 
-      err = block_run do |http|
+      uri   = url_for "balance"
+      data  = {}
+      err   = block_run do |http|
 
-        log("[sms_stats] => /rest/Sms/Statistics?#{pr}")
+        log("[balance] => #{uri} \n\r#{r}")
 
-        res  = http.get("/rest/Sms/Statistics?#{pr}")
-        data = ::JSON.parse(res.body) rescue {}
+        res = request do |headers|
+          http.post(uri, r, headers)
+        end
 
-        log("[sms_stats] <= #{data}")
+        log("[balance] <= #{uri} \n\r#{res.body}")
+
+        data = ::IbateleSms::Respond.balance(res.body)
 
       end # block_run
 
       return err  if err
-      return data if data["Code"].nil?
+      return data if data.is_a?(::IbateleSms::Error)
 
-      case data["Code"]
+      data
 
-        when 1 then ::IbateleSms::SessionIdError.new(data["Desc"])
-        when 2 then ::IbateleSms::ArgumentError.new(data["Desc"])
-        when 9 then ::IbateleSms::ArgumentError.new(data["Desc"])
-        else        ::IbateleSms::UnknownError.new(data["Desc"])
+    end # balance
 
-      end # case
+    def time(login, pass)
 
-    end # sms_stats
+      r = ::IbateleSms::Request.time({
+
+        login:      login,
+        password:   pass
+
+      })
+
+      uri   = url_for "time"
+      data  = {}
+      err   = block_run do |http|
+
+        log("[time] => #{uri} \n\r#{r}")
+
+        res = request do |headers|
+          http.post(uri, r, headers)
+        end
+
+        log("[time] <= #{uri} \n\r#{res.body}")
+
+        data = ::IbateleSms::Respond.time(res.body)
+
+      end # block_run
+
+      return err  if err
+      return data if data.is_a?(::IbateleSms::Error)
+
+      data
+
+    end # time
+
+    def info(login, pass, phones)
+
+      r = ::IbateleSms::Request.info({
+
+        login:      login,
+        password:   pass,
+        phones:     phones.is_a?(::Array) ? phones : [phones]
+
+      })
+
+      uri   = url_for "def"
+      data  = []
+      err   = block_run do |http|
+
+        log("[info] => #{uri} \n\r#{r}")
+
+        res = request do |headers|
+          http.post(uri, r, headers)
+        end
+
+        log("[info] <= #{uri} \n\r#{res.body}")
+
+        data = ::IbateleSms::Respond.info(res.body)
+
+      end # block_run
+
+      return err  if err
+      return data if data.is_a?(::IbateleSms::Error)
+
+      data
+
+    end # info
 
     private
 
@@ -178,6 +190,14 @@ module IbateleSms
       self
 
     end # log
+
+    def url_for(func = nil)
+
+      uri = "/xml/"
+      uri << "#{func}.php" unless func.nil?
+      uri
+
+    end # url_for
 
     def block_run
 
@@ -193,7 +213,7 @@ module IbateleSms
             ::IbateleSms::PORT,
             :use_ssl => ::IbateleSms::USE_SSL
           ) do |http|
-              yield(http)
+            yield(http)
           end
 
         }
@@ -225,6 +245,28 @@ module IbateleSms
       error
 
     end # block_run
+
+    def request
+
+      try_count = ::IbateleSms::RETRY
+      headers   = {
+        "Content-Type" => "text/xml; charset=utf-8"
+      }
+
+      res = yield(headers)
+      while(try_count > 0 && res.code.to_i >= 300)
+
+        log("[retry] #{try_count}. Wait #{::IbateleSms::WAIT_TIME} sec.")
+
+        res = yield(headers)
+        try_count -= 1
+        sleep ::IbateleSms::WAIT_TIME
+
+      end # while
+
+      res
+
+    end # request
 
   end # Base
 
