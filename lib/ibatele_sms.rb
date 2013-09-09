@@ -81,7 +81,7 @@ module IbateleSms
   def turn_on
 
     @active = true
-    puts "Отправка SMS ВКЛЮЧЕНА"
+    puts "[IbateleSms] Отправка SMS ВКЛЮЧЕНА"
     self
 
   end # turn_on
@@ -89,7 +89,7 @@ module IbateleSms
   def turn_off
 
     @active = false
-    puts "Отправка SMS ОТКЛЮЧЕНА"
+    puts "[IbateleSms] Отправка SMS ОТКЛЮЧЕНА"
     self
 
   end # turn_off
