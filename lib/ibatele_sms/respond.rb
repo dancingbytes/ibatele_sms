@@ -46,7 +46,7 @@ module IbateleSms
 
           number_sms: res["number_sms"],
           id_sms:     res["id_sms"],
-          parts:      res["parts"],
+          parts:      res["parts"].to_i,
           id_turn:    res["id_turn"]
 
         }
