@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["piliaiev@gmail.com"]
   spec.description   = %q{Api for sending sms through ibatele.com}
   spec.summary       = %q{Api for sending sms through ibatele.com}
-  spec.homepage      = ""
+  spec.homepage      = "https://github.com/dancingbytes/ibatele_sms"
   spec.license       = "BSD"
 
   spec.files         = `git ls-files`.split($/)

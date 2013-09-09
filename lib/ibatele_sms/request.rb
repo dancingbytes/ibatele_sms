@@ -60,11 +60,7 @@ module IbateleSms
       create_xml do |xml|
 
         xml.get_state {
-
-          (@params[:mid] || []).compact.uniq.each do |el|
-            xml.id_sms el
-          end
-
+          xml.id_sms @params[:mid]
         } # message
 
       end # create_xml
@@ -84,11 +80,7 @@ module IbateleSms
       create_xml do |xml|
 
         xml.phones {
-
-          (@params[:phones] || []).compact.uniq.each do |el|
-            xml.phone el
-          end
-
+          xml.phone @params[:phone]
         } # message
 
       end # create_xml

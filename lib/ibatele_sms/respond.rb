@@ -36,35 +36,31 @@ module IbateleSms
       error = get_error
       return error if error
 
-      res   = @doc.search(".//response/information")
+      res   = @doc.search(".//response/information").first
 
-      return ::IbateleSms::RequestError.new("Неверный ответ сервера") if res.size == 0
+      return ::IbateleSms::RequestError.new("Неверный ответ сервера") if res.nil?
 
-      res.inject([]) { |arr, el|
+      if res.text == "send"
 
-        if el.text == "send"
+        {
 
-          arr << {
+          number_sms: res["number_sms"],
+          id_sms:     res["id_sms"],
+          parts:      res["parts"],
+          id_turn:    res["id_turn"]
 
-            number_sms: el["number_sms"],
-            id_sms:     el["id_sms"],
-            parts:      el["parts"],
-            id_turn:    el["id_turn"]
+        }
 
-          }
+      else
 
-        else
+        {
 
-          arr << {
+          number_sms: res["number_sms"],
+          error:      ::IbateleSms::RespondError.new(res.text)
 
-            number_sms: el["number_sms"],
-            error:      ::IbateleSms::RespondError.new(el.text)
+        }
 
-          }
-
-        end # if
-
-      } # inject
+      end # if
 
     end # sms_send
 
@@ -73,22 +69,16 @@ module IbateleSms
       error = get_error
       return error if error
 
-      res   = @doc.search(".//response/state")
+      res   = @doc.search(".//response/state").first
 
-      return ::IbateleSms::RequestError.new("Неверный ответ сервера") if res.size == 0
+      return ::IbateleSms::RequestError.new("Неверный ответ сервера") if res.nil?
 
-      hash = {}
-      res.each { |el|
+      {
 
-        hash[el["id_sms"]] = {
+        time:     res["time"],
+        state:    get_state(res.text)
 
-          time:     el["time"],
-          state:    get_state(el.text)
-
-        }
-
-      } # inject
-      hash
+      }
 
     end # sms_state
 
@@ -133,27 +123,19 @@ module IbateleSms
       error = get_error
       return error if error
 
-      res   = @doc.search(".//response/phone")
+      res   = @doc.search(".//response/phone").first
 
-      return ::IbateleSms::RequestError.new("Неверный ответ сервера") if res.size == 0
+      return ::IbateleSms::RequestError.new("Неверный ответ сервера") if res.nil?
 
-      hash = {}
-      res.each { |el|
+      return {} if res["operator"] != "unknown"
 
-        if el["operator"] != "unknown"
+      {
 
-          hash[el.text] = {
+        operator:   res["operator"],
+        region:     res["region"],
+        time_zone:  res["time_zone"]
 
-            operator:   el["operator"],
-            region:     el["region"],
-            time_zone:  el["time_zone"]
-
-          }
-
-        end # if
-
-      } # each
-      hash
+      }
 
     end # info
 

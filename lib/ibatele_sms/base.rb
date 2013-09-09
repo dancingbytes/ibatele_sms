@@ -24,7 +24,7 @@ module IbateleSms
       })
 
       uri   = url_for
-      data  = []
+      data  = {}
       err   = block_run do |http|
 
         log("[sms_send] => #{uri} \n\r#{r}")
@@ -41,14 +41,10 @@ module IbateleSms
 
       return err  if err
       return data if data.is_a?(::IbateleSms::Error)
-
-      data = data.first
       return data[:error] if data[:error]
 
-      hash = {}
-      hash[phone] = data
-      hash[phone][:client_id_sms] = client_id_sms
-      hash
+      data[:client_id_sms] = client_id_sms
+      data
 
     end # sms_send
 
@@ -63,7 +59,7 @@ module IbateleSms
       })
 
       uri   = url_for "state"
-      data  = []
+      data  = {}
       err   = block_run do |http|
 
         log("[sms_state] => #{uri} \n\r#{r}")
@@ -149,18 +145,18 @@ module IbateleSms
 
     end # time
 
-    def info(login, pass, phones)
+    def info(login, pass, phone)
 
       r = ::IbateleSms::Request.info({
 
         login:      login,
         password:   pass,
-        phones:     phones.is_a?(::Array) ? phones : [phones]
+        phone:      phone
 
       })
 
       uri   = url_for "def"
-      data  = []
+      data  = {}
       err   = block_run do |http|
 
         log("[info] => #{uri} \n\r#{r}")
