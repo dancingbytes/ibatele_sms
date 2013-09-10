@@ -54,7 +54,7 @@ module IbateleSms
 
         login:      login,
         password:   pass,
-        mid:        mid.is_a?(::Array) ? mid : [mid]
+        mid:        mid
 
       })
 
