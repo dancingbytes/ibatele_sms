@@ -38,7 +38,7 @@ module IbateleSms
 
   end # message
 
-  def state(*args)
+  def state(args)
 
     return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
     ::IbateleSms::Base.sms_state(@usr, @pass, args)
