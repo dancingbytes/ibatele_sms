@@ -74,10 +74,7 @@ module IbateleSms
 
       end # block_run
 
-      return err  if err
-      return data if data.is_a?(::IbateleSms::Error)
-
-      data
+      err || data
 
     end # sms_state
 
@@ -106,10 +103,7 @@ module IbateleSms
 
       end # block_run
 
-      return err  if err
-      return data if data.is_a?(::IbateleSms::Error)
-
-      data
+      err || data
 
     end # balance
 
@@ -138,10 +132,7 @@ module IbateleSms
 
       end # block_run
 
-      return err  if err
-      return data if data.is_a?(::IbateleSms::Error)
-
-      data
+      err || data
 
     end # time
 
@@ -171,10 +162,7 @@ module IbateleSms
 
       end # block_run
 
-      return err  if err
-      return data if data.is_a?(::IbateleSms::Error)
-
-      data
+      err || data
 
     end # info
 
