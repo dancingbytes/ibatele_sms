@@ -10,14 +10,14 @@ module IbateleSms
 
   extend self
 
-  TIMEOUT   = 30
-  HOST      = 'lk.ibatele.com'
-  PORT      = 443
-  USE_SSL   = true
-  RETRY     = 3
-  WAIT_TIME = 5
-  PHONE_RE  = /\A(\+7|7|8)(\d{10})\Z/
-  TITLE_SMS = "Anlas.ru"
+  TIMEOUT   = 30.freeze
+  HOST      = 'lk.ibatele.com'.freeze
+  PORT      = 443.freeze
+  USE_SSL   = true.freeze
+  RETRY     = 3.freeze
+  WAIT_TIME = 5.freeze
+  PHONE_RE  = /\A(\+7|7|8)(\d{10})\Z/.freeze
+  TITLE_SMS = "Anlas.ru".freeze
 
   def login(usr, pass)
 
@@ -32,8 +32,8 @@ module IbateleSms
     return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
 
     new_phone = ::IbateleSms::convert_phone(phone)
-
     return ::IbateleSms::ArgumentError.new("Неверный формат телефона: #{phone}") unless new_phone
+
     ::IbateleSms::Base.sms_send(@usr, @pass, phone, msg, opts)
 
   end # message
