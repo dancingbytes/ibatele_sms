@@ -5,6 +5,16 @@ module IbateleSms
 
     class << self
 
+      STATE_MESSAGE = {
+
+        0   => "Ожидает отправки",
+        1   => "Доставлено",
+        2   => "Не доставлено",
+        3   => "Доставка просрочена",
+        4   => "Частичная доставка"
+
+      }.freeze
+
       def sms_send(body)
         new(body).sms_send
       end # send_sms
@@ -73,10 +83,12 @@ module IbateleSms
 
       return ::IbateleSms::RequestError.new("Неверный ответ сервера") if res.nil?
 
+      code = get_state(res.text)
       {
 
         time:     res["time"],
-        state:    get_state(res.text)
+        state:    code,
+        message:  STATE_MESSAGE[code] || "Неизвестная ошибка"
 
       }
 
@@ -153,10 +165,10 @@ module IbateleSms
 
       case (msg || "").downcase
 
-        when "send"             then 1
+        when "send"             then 0
+        when "deliver"          then 1
         when "not_deliver"      then 2
         when "expired"          then 3
-        when "deliver"          then 0
         when "partly_deliver"   then 4
         else -1
 
