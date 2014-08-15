@@ -39,31 +39,19 @@ module IbateleSms
   end # message
 
   def state(args)
-
-    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
     ::IbateleSms::Base.sms_state(@usr, @pass, args)
-
   end # state
 
   def balance
-
-    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
     ::IbateleSms::Base.balance(@usr, @pass)
-
   end # balance
 
   def time
-
-    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
     ::IbateleSms::Base.time(@usr, @pass)
-
   end # time
 
   def info(*args)
-
-    return ::IbateleSms::InactiveError.new("Работа смс остановлена") unless self.active?
     ::IbateleSms::Base.info(@usr, @pass, args)
-
   end # info
 
   def error?(e)
